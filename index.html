@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>METEORIC // Premium Weather</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Inter:wght@200;300;400;600&family=JetBrains+Mono:wght@100;300&display=swap');
+        
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-void: #050505;
+            --glass-core: rgba(15, 15, 15, 0.4);
+            --border-white: rgba(255, 255, 255, 0.04);
+            --accent-gold: #c5a059;
+            --accent-mint: #2dd4bf;
+            --accent-red: #f43f5e;
+            --text-dim: #666;
+            --text-bright: #ffffff;
+        }
+        body {
+            background-color: var(--bg-void);
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(45, 212, 191, 0.03) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(244, 63, 94, 0.03) 0%, transparent 40%);
+            color: var(--text-bright);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+        .zenith-container {
+            width: 100%; max-width: 1200px;
+            background: var(--glass-core);
+            border: 1px solid var(--border-white);
+            border-radius: 40px; padding: 80px;
+            box-shadow: 0 100px 200px -50px rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(60px); position: relative;
+        }
+        .national-accent { position: absolute; top: 40px; left: 80px; display: flex; gap: 4px; }
+        .dot { width: 4px; height: 4px; border-radius: 50%; }
+        .dot.red { background: var(--accent-red); }
+        .dot.green { background: var(--accent-mint); }
+        header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 80px; }
+        .brand-title h1 { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; }
+        .brand-title p { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 3px; margin-top: 8px; }
+        .time-badge { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent-gold); letter-spacing: 2px; }
+        .search-wrap { position: relative; margin-bottom: 60px; display: flex; gap: 12px; align-items: center; }
+        .search-wrap input { flex: 1; background: transparent; border: none; border-bottom: 1px solid var(--border-white); padding: 20px 0; font-family: 'Syne', sans-serif; font-size: 2.5rem; color: var(--text-bright); outline: none; }
+        .search-wrap button { background: transparent; border: 1px solid var(--border-white); color: var(--text-bright); padding: 12px 28px; border-radius: 30px; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: all 0.2s ease; }
+        .search-wrap button:hover { background: var(--text-bright); color: var(--bg-void); }
+        .geo-btn { background: var(--accent-mint); color: #050505; border: none; padding: 12px 20px; border-radius: 30px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; cursor: pointer; font-weight: 600; }
+        .geo-btn:hover { opacity: 0.9; }
+        .main-content { display: grid; grid-template-columns: 1.5fr 1fr; gap: 100px; }
+        .city-name h2 { font-family: 'Syne', sans-serif; font-size: 4rem; font-weight: 800; line-height: 0.9; letter-spacing: -2px; }
+        .condition-pill { display: inline-flex; align-items: center; gap: 10px; margin-top: 24px; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); }
+        .condition-pill .status-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-red); box-shadow: 0 0 15px var(--accent-red); }
+        .temperature-display { margin-top: 60px; font-family: 'Syne', sans-serif; font-size: 10rem; font-weight: 800; line-height: 0.8; letter-spacing: -8px; }
+        .temperature-display span { font-size: 3rem; color: var(--accent-gold); margin-left: 10px; }
+        .tech-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+        .metric-item { border-top: 1px solid var(--border-white); padding-top: 20px; }
+        .metric-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; }
+        .metric-value { font-size: 1.8rem; font-weight: 300; margin-top: 10px; }
+        .hourly-feed { margin-top: 80px; border-top: 1px solid var(--border-white); padding-top: 40px; }
+        .hourly-scroll { display: flex; justify-content: space-between; overflow-x: auto; gap: 40px; }
+        .hour-node { text-align: center; min-width: 60px; }
+        .h-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); }
+        .h-temp { font-size: 1.2rem; font-weight: 600; margin-top: 12px; }
+        .h-icon { font-size: 22px; margin-top: 8px; }
+        .loading { opacity: 0.6; pointer-events: none; }
+        .error-message { color: var(--accent-red); font-size: 14px; margin-top: 10px; }
+        footer { margin-top: 80px; display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; }
+        @media (max-width: 900px) {
+            .main-content { grid-template-columns: 1fr; gap: 60px; }
+            .zenith-container { padding: 40px; }
+            .city-name h2 { font-size: 2.5rem; }
+            .temperature-display { font-size: 6rem; }
+            .search-wrap { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="zenith-container">
+        <div class="national-accent"><div class="dot red"></div><div class="dot green"></div></div>
+        <header>
+            <div class="brand-title"><h1>METEORIC</h1><p>Premium Real-Time Weather</p></div>
+            <div class="time-badge" id="live-clock">12:00:00 UTC</div>
+        </header>
+
+        <div class="search-wrap">
+            <input type="text" id="city-input" value="Ouagadougou" placeholder="Entrez une ville...">
+            <button id="search-btn">Lancer le scan</button>
+            <button id="geo-btn" class="geo-btn">📍 Ma position</button>
+        </div>
+
+        <div class="main-content">
+            <div class="hero-data">
+                <div class="city-name">
+                    <h2 id="city-title">OUAGADOUGOU</h2>
+                    <div class="condition-pill">
+                        <div class="status-indicator" id="status-dot"></div>
+                        <span id="condition-text">Cellules orageuses détectées</span>
+                    </div>
+                </div>
+                <div class="temperature-display" id="temp-val">32<span>°</span></div>
+            </div>
+
+            <div class="tech-metrics">
+                <div class="metric-item"><p class="metric-label">Humidité</p><p class="metric-value" id="m-hum">75%</p></div>
+                <div class="metric-item"><p class="metric-label">Vents</p><p class="metric-value" id="m-wind">18.5 km/h</p></div>
+                <div class="metric-item"><p class="metric-label">Pression</p><p class="metric-value" id="m-press">1012 hPa</p></div>
+                <div class="metric-item"><p class="metric-label">Visibilité</p><p class="metric-value" id="m-vis">10 km</p></div>
+            </div>
+        </div>
+
+        <div class="hourly-feed">
+            <div class="hourly-scroll" id="hourly-container">
+                <div class="hour-node"><p class="h-time">09:00</p><p class="h-temp">27°</p><p class="h-icon">☁</p></div>
+                <div class="hour-node"><p class="h-time">12:00</p><p class="h-temp">33°</p><p class="h-icon">🌤</p></div>
+                <div class="hour-node"><p class="h-time">15:00</p><p class="h-temp">32°</p><p class="h-icon">🌧</p></div>
+                <div class="hour-node"><p class="h-time">18:00</p><p class="h-temp">30°</p><p class="h-icon">⛈</p></div>
+                <div class="hour-node"><p class="h-time">21:00</p><p class="h-temp">27°</p><p class="h-icon">☼</p></div>
+            </div>
+        </div>
+
+        <div id="error-box" class="error-message" style="display:none;"></div>
+
+        <footer>
+            <span>Data Node: METEORIC-01 • Powered by OpenWeatherMap</span>
+            <span>© 2026 Meteoric Protocol</span>
+        </footer>
+    </div>
+
+    <script>
+        // === CLÉ API OPENWEATHERMAP INTÉGRÉE ===
+        const API_KEY = 'd3487b86d10d32652136d7bce2070ed0';
+
+        const weatherDB = {
+            "ouagadougou": { name: "OUAGADOUGOU", temp: 32, hum: "75%", wind: "18.5 km/h", press: "1012 hPa", vis: "10 km", cond: "Cellules orageuses détectées", alert: true },
+            "bobo-dioulasso": { name: "BOBO-DIOULASSO", temp: 26, hum: "88%", wind: "12 km/h", press: "1015 hPa", vis: "8 km", cond: "Ciel couvert et ondées", alert: false },
+            "koudougou": { name: "KOUDOUGOU", temp: 31, hum: "68%", wind: "22 km/h", press: "1011 hPa", vis: "12 km", cond: "Conditions stables", alert: false }
+        };
+
+        function updateClock() {
+            document.getElementById('live-clock').innerText = new Date().toTimeString().split(' ')[0] + " LOC";
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function showError(msg) {
+            const errorBox = document.getElementById('error-box');
+            errorBox.innerText = msg;
+            errorBox.style.display = 'block';
+            setTimeout(() => errorBox.style.display = 'none', 4000);
+        }
+
+        function updateUI(data) {
+            document.getElementById('city-title').innerText = data.name;
+            document.getElementById('temp-val').innerHTML = `${Math.round(data.temp)}<span>°</span>`;
+            document.getElementById('m-hum').innerText = data.hum;
+            document.getElementById('m-wind').innerText = data.wind;
+            document.getElementById('m-press').innerText = data.press;
+            document.getElementById('m-vis').innerText = data.vis;
+            document.getElementById('condition-text').innerText = data.cond;
+
+            const dot = document.getElementById('status-dot');
+            dot.style.background = data.alert ? 'var(--accent-red)' : 'var(--accent-mint)';
+            dot.style.boxShadow = data.alert ? '0 0 15px var(--accent-red)' : '0 0 15px var(--accent-mint)';
+        }
+
+        async function fetchRealWeather(city) {
+            try {
+                const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric&lang=fr`);
+                if (!res.ok) throw new Error("Ville non trouvée ou problème API");
+                
+                const json = await res.json();
+
+                return {
+                    name: json.name.toUpperCase(),
+                    temp: json.main.temp,
+                    hum: json.main.humidity + "%",
+                    wind: (json.wind.speed * 3.6).toFixed(1) + " km/h",
+                    press: json.main.pressure + " hPa",
+                    vis: (json.visibility / 1000) + " km",
+                    cond: json.weather[0].description.charAt(0).toUpperCase() + json.weather[0].description.slice(1),
+                    alert: json.weather[0].main.toLowerCase().includes('thunder') || json.weather[0].main.toLowerCase().includes('storm')
+                };
+            } catch (err) {
+                showError("Erreur : " + err.message);
+                return null;
+            }
+        }
+
+        async function search() {
+            const input = document.getElementById('city-input').value.trim();
+            if (!input) return;
+
+            const container = document.querySelector('.zenith-container');
+            container.classList.add('loading');
+
+            let data = await fetchRealWeather(input);
+
+            // Fallback to local database if API fails
+            if (!data) {
+                const key = input.toLowerCase();
+                data = weatherDB[key] || { 
+                    name: input.toUpperCase(), 
+                    temp: 30, 
+                    hum: "65%", 
+                    wind: "15 km/h", 
+                    press: "1013 hPa", 
+                    vis: "10 km", 
+                    cond: "Conditions stables", 
+                    alert: false 
+                };
+            }
+
+            updateUI(data);
+            container.classList.remove('loading');
+        }
+
+        async function getUserLocation() {
+            const container = document.querySelector('.zenith-container');
+            container.classList.add('loading');
+
+            if (!navigator.geolocation) {
+                showError("Géolocalisation non supportée par ton navigateur");
+                container.classList.remove('loading');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+
+                try {
+                    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}&units=metric&lang=fr`);
+                    const json = await res.json();
+
+                    const data = {
+                        name: json.name.toUpperCase(),
+                        temp: json.main.temp,
+                        hum: json.main.humidity + "%",
+                        wind: (json.wind.speed * 3.6).toFixed(1) + " km/h",
+                        press: json.main.pressure + " hPa",
+                        vis: (json.visibility / 1000) + " km",
+                        cond: json.weather[0].description.charAt(0).toUpperCase() + json.weather[0].description.slice(1),
+                        alert: json.weather[0].main.toLowerCase().includes('thunder') || json.weather[0].main.toLowerCase().includes('storm')
+                    };
+
+                    updateUI(data);
+                    document.getElementById('city-input').value = json.name;
+                } catch (e) {
+                    showError("Impossible de récupérer ta position");
+                }
+                container.classList.remove('loading');
+            }, () => {
+                showError("Permission de localisation refusée");
+                container.classList.remove('loading');
+            });
+        }
+
+        // Event listeners
+        document.getElementById('search-btn').addEventListener('click', search);
+        document.getElementById('city-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') search();
+        });
+        document.getElementById('geo-btn').addEventListener('click', getUserLocation);
+
+        // Load default city on start with real API
+        window.onload = async () => {
+            const defaultCity = "Ouagadougou";
+            document.getElementById('city-input').value = defaultCity;
+
+            let data = await fetchRealWeather(defaultCity);
+            
+            if (!data) {
+                data = weatherDB[defaultCity.toLowerCase()];
+            }
+            
+            if (data) updateUI(data);
+        };
+    </script>
+</body>
+</html>
